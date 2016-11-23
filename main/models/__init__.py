@@ -4,11 +4,10 @@ from flask_sqlalchemy import SQLAlchemy
 from main.plugins.state import get_user_last_interact_time
 from .. import app, redis
 from ..utils import init_wechat_sdk
-
-db = SQLAlchemy(app)
-
 from .auth import Auth
 from .user import User
+
+db = SQLAlchemy(app)
 
 
 def set_user_info(openid):
