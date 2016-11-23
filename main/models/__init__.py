@@ -1,8 +1,9 @@
 import time
 from flask_sqlalchemy import SQLAlchemy
+
+from main.plugins.state import get_user_last_interact_time
 from .. import app, redis
 from ..utils import init_wechat_sdk
-
 
 db = SQLAlchemy(app)
 
@@ -11,9 +12,9 @@ from .user import User
 
 
 def set_user_info(openid):
-    '''
+    """
     保存用户信息
-    '''
+    """
     redis_prefix = "wechat:user:"
     cache = redis.hexists(redis_prefix + openid, 'name')
 
@@ -26,7 +27,7 @@ def set_user_info(openid):
                 if 'name' not in user_info:
                     raise KeyError(user_info)
             except Exception as e:
-                app.logger.warning("获取微信用户信息API出错: %s" %e)
+                app.logger.warning("获取微信用户信息API出错: %s" % e)
                 user_info = None
             else:
                 user = User(openid=user_info['openid'],
@@ -40,7 +41,7 @@ def set_user_info(openid):
                 user_info = user
 
         if user_info:
-            #cache it
+            # cache it
             redis.hmset(redis_prefix + user_info.openid, {
                 "name": user_info.name,
                 "province": user_info.province,
@@ -58,7 +59,7 @@ def set_user_info(openid):
                 if 'name' not in user_info:
                     raise KeyError(user_info)
             except Exception as e:
-                app.logger.warning('获取微信用户api出错 %s' %e)
+                app.logger.warning('获取微信用户api出错 %s' % e)
             else:
                 user = User.query.filter_by(openid=openid).first()
                 user.name = user_info['nickname']
@@ -80,9 +81,9 @@ def set_user_info(openid):
 
 
 def is_user_exists(openid):
-    '''
+    """
     check if user exist in db
-    '''
+    """
     redis_prefix = 'wechat:user:'
     cache = redis.exists(redis_prefix + openid)
     if not cache:

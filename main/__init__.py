@@ -8,14 +8,14 @@ from redis import Redis
 from .plugins.queue import make_celery
 
 app = Flask(__name__, instance_relative_config=True)
-#加载配置
+# 加载配置
 app.config.from_object('config')
 app.config.from_pyfile('config.py')
 
-#队列
+# 队列
 celery = make_celery(app)
 
-#记录日志
+# 记录日志
 handlers = RotatingFileHandler('app.log', maxBytes=10000, backupCount=1)
 handlers.setFormatter(logging.Formatter(
     '%(asctime)s  %(levelname)s: %(message)s '
@@ -24,10 +24,10 @@ handlers.setFormatter(logging.Formatter(
 handlers.setLevel(logging.WARNING)
 app.logger.addHandler(handlers)
 
-#init the 3 part lib
+# init the 3 part lib
 redis = Redis()
 
 # Router
 from .routes import *
-#定时任务
-from plugins import *
+# 定时任务
+from .plugins import *

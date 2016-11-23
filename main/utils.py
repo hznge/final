@@ -12,24 +12,29 @@ import random
 import string
 import base64
 
+
 def check_signature(func):
     """
     微信签名验证
     """
+
     @wraps(func)
-    def decorated_function(*args, *kwargs):
+    def decorated_function(*args, **kwargs):
         signature = request.args.get('signature', '')
         timestamp = request.args.get('timestamp', '')
         nonce = request.args.get('nonce', '')
 
         wechat = init_wechat_sdk()
         if not wechat.check_signature(signature=signature,
-            timestamp=timestamp, nonce=nonce):
+                                      timestamp=timestamp, nonce=nonce):
             if request.method == 'POST':
                 return "signature failed"
             else:
                 return redirect(app.config['MAIN_URL'])
-        return decorated_function
+
+        return func(*args, **kwargs)
+
+    return decorated_function
 
 
 def init_wechat_sdk():
@@ -40,16 +45,16 @@ def init_wechat_sdk():
     ticket_expires_at = redis.get("wechat:jsapi_ticket_expires_at")
     if access_token and jsapi_ticket and token_expires_at and ticket_expires_at:
         wechat = WechatBasic(token=app.config['TOKEN'],
-                            appid=app.config['APP_ID'],
-                            appsecret=app.config['APP_SECRET'],
-                            access_token=access_token,
-                            access_token_expires_at=int(token_expires_at),
-                            jsapi_ticket=jsapi_ticket,
-                            jsapi_ticket_expires_at=int(ticket_expires_at))
+                             appid=app.config['APP_ID'],
+                             appsecret=app.config['APP_SECRET'],
+                             access_token=access_token,
+                             access_token_expires_at=int(token_expires_at),
+                             jsapi_ticket=jsapi_ticket,
+                             jsapi_ticket_expires_at=int(ticket_expires_at))
     else:
         wechat = WechatBasic(appid=app.config['APP_ID'],
-                            appsecret=app.config['APP_SECRET'],
-                            token=app.config['TOKEN'])
+                             appsecret=app.config['APP_SECRET'],
+                             token=app.config['TOKEN'])
         access_token = wechat.get_access_token()
         redis.set("wechat:access_token", access_token['access_token'], 7000)
         redis.set("wechat:access_token_expires_at", access_token['access_token_expires_at'], 7000)
@@ -64,13 +69,14 @@ def update_wechat_token():
     wechat = init_wechat_sdk()
     wechat.grant_token()
     wechat.grant_jsapi_ticket()
+    access_token = wechat.get_access_token()
     redis.set("wechat:access_token", access_token['access_token'], 7000)
     redis.set("wechat:access_token_expires_at",
-            access_token["access_token_expires_at"], 7000)
+              access_token["access_token_expires_at"], 7000)
     jsapi_ticket = wechat.get_jsapi_ticket()
     redis.set("wechat:jsapi_ticket", jsapi_ticket['jsapi_ticket'], 7000)
     redis.set("wechat:jsapi_ticket_expires_at",
-            jsapi_ticket['jsapi_ticket_expires_at'], 7000)
+              jsapi_ticket['jsapi_ticket_expires_at'], 7000)
 
 
 def get_wechat_access_token():
@@ -100,27 +106,26 @@ def get_jsapi_signature_data(url):
 
 
 def generate_random_str(N):
-    '''生成随机字符串'''
+    """生成随机字符串"""
     return ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits)
-        for _ in range(N))
+                   for _ in range(N))
 
 
 class AESCipher:
-
-    '''
+    """
     加解密方法：http://stackoverflow.com/questions/12524994
-    '''
+    """
 
     def __init__(self, key):
         self.BS = 16
-        self.pad = lambda s: s +
-            (self.BS - len(s) % self.BS) * chr(self.BS - len(s) % self.BS)
-        self.unpad = lambda s: s[:-ord(s[len(s) - 1: ])]
+        self.pad = lambda s: s + \
+                             (self.BS - len(s) % self.BS) * chr(self.BS - len(s) % self.BS)
+        self.unpad = lambda s: s[:-ord(s[len(s) - 1:])]
         self.key = key
 
     def encrypt(self, raw):
         raw = self.pad(raw)
-        iv = Random.new().read(AES.MODE_CBC, iv)
+        iv = Random.new().read(AES.block_size)
         cipher = AES.new(self.key, AES.MODE_CBC, iv)
         return base64.b64encode(iv + cipher.encrypt(raw))
 
